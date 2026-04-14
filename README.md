@@ -143,35 +143,37 @@ cp workload_binary ./rootfs-alpha/
 ## 3. Demo with Screenshots
 
 ### Screenshot 1 — Multi-container supervision
-![multi-container](Screenshots/01_multi_container.png)
+![multi-container](Screenshots/multi-container.png)
+![multi-container](Screenshots/multi-container2.png)
 Two cpu_hog containers (alpha, beta) running simultaneously under one supervisor process, confirmed by `ps aux` showing both child PIDs alive.
 
 ### Screenshot 2 — Metadata tracking
-![ps output](Screenshots/02_ps.png)
+![ps output](Screenshots/metadata-tracking.png)
 Output of `engine ps` showing tracked container metadata: ID, PID, state, soft/hard memory limits, exit code, and termination reason.
 
 ### Screenshot 3 — Bounded-buffer logging
-![logs](Screenshots/03_logs.png)
+![logs](Screenshots/bounded-buffer.png)
 Log file contents captured through the producer-consumer pipeline via `engine logs alpha`, showing cpu_hog progress lines written by the container and routed through the bounded buffer to disk.
 
 ### Screenshot 4 — CLI and IPC
-![cli ipc](Screenshots/04_cli_ipc.png)
+![cli ipc](Screenshots/cli-ipc.png)
 A `engine stop alpha` CLI command sent to the supervisor over the UNIX domain socket (Path B), with the supervisor printing its acknowledgement response back to the client.
 
 ### Screenshot 5 — Soft-limit warning
-![soft limit](Screenshots/05_soft_limit.png)
+![soft limit](Screenshots/soft.png)
 `dmesg` output showing the `[container_monitor] SOFT LIMIT` warning event emitted by the kernel module when the memtest container's RSS first exceeded its soft threshold.
 
 ### Screenshot 6 — Hard-limit enforcement
-![hard limit](Screenshots/06_hard_limit.png)
+![hard limit](Screenshots/6b.png)
+![hard limit](Screenshots/hard.png)
 `dmesg` showing the `[container_monitor] HARD LIMIT` kill event, and `engine ps` showing the memtest container with state `killed` and termination reason `hard_limit_killed`.
 
 ### Screenshot 7 — Scheduling experiment
-![scheduling](Screenshots/07_scheduling.png)
+![scheduling](Screenshots/7.png)
 `highrun` (nice -10) vs `lowrun` (nice +10) running concurrently — highrun accumulates more CPU ticks per wall-clock second, demonstrating CFS weight-based scheduling under contention.
 
 ### Screenshot 8 — Clean teardown
-![teardown](Screenshots/08_teardown.png)
+![teardown](Screenshots/8.png)
 `ps aux | grep defunct` returning no results after supervisor shutdown, and the supervisor printing `[supervisor] exited cleanly.`, confirming all children were reaped and threads joined.
 
 ---
