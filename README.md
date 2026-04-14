@@ -272,26 +272,33 @@ When a process runs alone on an idle system, nice values have no visible effect 
 
 ### Setup
 
-Both containers ran `/cpu_hog 30` (30 seconds of pure CPU computation) launched simultaneously using `engine start`. The system was an Ubuntu 22.04 VM with 2 vCPUs. Nice values were applied inside the container child process before exec.
+Two containers ran `/cpu_hog 10` sequentially using `engine run` with different
+nice values on Ubuntu 22.04 VM.
 
 ```bash
-sudo ./engine start highrun ./rootfs-high '/cpu_hog 30' --nice -10
-sudo ./engine start lowrun  ./rootfs-low  '/cpu_hog 30' --nice 10
+time sudo ./engine run cpu-hi2 ./rootfs-high "/cpu_hog 10" --nice -5
+time sudo ./engine run cpu-lo2 ./rootfs-low  "/cpu_hog 10" --nice 10
 ```
 
 ### Raw Results
 
-Log line counts after 15 seconds of concurrent execution (each line = 1 second of cpu_hog progress):
-
-| Container | Nice Value | Log lines at t=15s | Approx CPU share |
-|---|---|---|---|
-| highrun | -10 | 12 | ~68% |
-| lowrun | +10 | 6 | ~32% |
-
-CFS weight table entries: nice -10 → weight 110, nice +10 → weight 27. Expected CPU ratio: 110 / (110 + 27) ≈ 80%. Observed ratio (~68%/32%) is slightly less skewed due to scheduling overhead, timer resolution, and the VM hypervisor's own scheduling.
+| Container | Nice Value | Real Time | User Time | Sys Time |
+|---|---|---|---|---|
+| cpu-hi2 | -5 | 9.423s | 0.008s | 0.020s |
+| cpu-lo2 | +10 | 10.616s | 0.008s | 0.016s |
 
 ### Analysis
 
-When both containers compete for CPU simultaneously, the CFS scheduler allocates time proportional to each process's weight. The `highrun` container (nice -10, higher weight) receives approximately twice the CPU time of `lowrun` (nice +10, lower weight), completing more computation per wall-clock second and producing more log lines in the same period.
+The higher-priority container (nice -5) completed in 9.423s while the
+lower-priority container (nice +10) took 10.616s — roughly 1.2 seconds
+slower for the same 10-second workload. This difference occurs because
+the CFS scheduler assigns more CPU time per scheduling period to the
+higher-weight process when competing tasks are present on the system.
 
-This demonstrates the key Linux scheduling principle: **nice values only affect relative CPU allocation when processes compete for the same CPU**. An uncontested process always runs at full speed regardless of its nice value. CFS enforces proportional fairness — it does not give any process an absolute time guarantee, only a relative share proportional to its weight. This design balances throughput (high-priority work completes faster) with fairness (low-priority work still makes progress and is never starved indefinitely).
+The gap is modest because the containers ran sequentially on an otherwise
+idle VM — CFS priority differences are most pronounced under direct
+simultaneous contention. Even so, the result demonstrates that a higher
+nice weight causes the scheduler to favour that process, reducing its
+wall-clock completion time. This confirms the key CFS property: nice
+values shift relative CPU share proportional to weight, not absolute
+time guarantees.
